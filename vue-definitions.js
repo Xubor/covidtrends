@@ -378,6 +378,19 @@ window.app = new Vue({
         .map(e => Object.assign({}, e, {region: e['Province/State']}));
     },
 
+    addSyntheticRegion(grouped, regionName, countries) {
+      const includedRegions = grouped.filter(e => countries.includes(e.region));
+      if (includedRegions.length == 0) return;
+
+      const newRegion = includedRegions.reduce((acc, cur) => {
+        for (const atr in cur) acc[atr] = (acc[atr] ? acc[atr] + cur[atr] : cur[atr]);
+        return acc;
+      }, {});
+      newRegion.region = regionName;
+
+      grouped.push(newRegion);
+    },
+
     processData(data, selectedRegion, updateSelectedCountries) {
       let dates = Object.keys(data[0]).slice(4);
       this.dates = dates;
@@ -398,6 +411,21 @@ window.app = new Vue({
           }
         }
 
+        // additional regions computed from present country data
+        this.addSyntheticRegion(grouped, 'EU', [
+          'Austria', 'Belgium', 'Bulgaria', 'Croatia', 'Cyprus',
+          'Czechia', 'Denmark', 'Estonia', 'Finland', 'France',
+          'Germany', 'Greece', 'Hungary', 'Ireland', 'Italy',
+          'Latvia', 'Lithuania', 'Luxembourg', 'Malta', 'Netherlands',
+          'Poland', 'Portugal', 'Romania', 'Slovakia', 'Slovenia',
+          'Spain', 'Sweden'
+        ]);
+        this.addSyntheticRegion(grouped, 'EU+UK+EFTA+Microstates', [
+          'EU', 'United Kingdom',
+          'Iceland', 'Liechtenstein', 'Norway', 'Switzerland',
+          'Andorra', 'Monaco', 'San Marino', 'Holy See'
+        ]);
+      
       } else {
         grouped = this.filterByCountry(data, dates, selectedRegion)
           .filter(e => !regionsToPullToCountryLevel.includes(e.region)); // also filter our Hong Kong and Macau as subregions of Mainland China
