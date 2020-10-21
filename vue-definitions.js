@@ -219,6 +219,12 @@ window.app = new Vue({
         this.doublingTime = doublingTime;
       }
       
+      if (urlParameters.has('perMillion')) {
+        let perMillion = urlParameters.get('perMillion');
+        this.perMillion = (perMillion == 'true');
+      }
+      this.minCasesInCountry = (this.perMillion ? 0.00050 : 50);
+
       if (urlParameters.has('select')) {
         this.mySelect = urlParameters.get('select').toLowerCase();
       }
@@ -256,6 +262,13 @@ window.app = new Vue({
     selectedRegion() {
       if (!this.firstLoad) {
         this.pullData(this.selectedData, this.selectedRegion, /*updateSelectedCountries*/ true);
+      }
+      this.searchField = '';
+    },
+
+    perMillion() {
+      if (!this.firstLoad) {
+        this.pullData(this.selectedData, this.selectedRegion, /*updateSelectedCountries*/ false);
       }
       this.searchField = '';
     },
@@ -411,6 +424,17 @@ window.app = new Vue({
           }
         }
 
+        if (this.perMillion) {
+          grouped.forEach(country => {
+            country.population = population2020.reduce((popacc, nextCountry) =>
+              popacc + (nextCountry[0] == country.region || nextCountry[2] == country.region ? nextCountry[3] / 1000 : 0),
+            0);
+            if (country.population == 0) console.log('No population data for ' + country.region);
+          });
+
+          grouped = grouped.filter(c => c.population);
+        }
+
         // additional regions computed from present country data
         this.addSyntheticRegion(grouped, 'EU', [
           'Austria', 'Belgium', 'Bulgaria', 'Croatia', 'Cyprus',
@@ -454,11 +478,11 @@ window.app = new Vue({
             region = renames[region];
           }
 
-          const cases = arr.map(e => e >= this.minCasesInCountry ? e : NaN);
+          const cases = arr.map(e => e >= this.minCasesInCountry ? e / (this.perMillion ? row.population : 1) : NaN);
           covidData.push({
             country: region,
             cases,
-            slope: slope.map((e, i) => arr[i] >= this.minCasesInCountry ? e : NaN),
+            slope: slope.map((e, i) => arr[i] >= this.minCasesInCountry ? e / (this.perMillion ? row.population : 1) : NaN),
             maxCases: this.myMax(...cases)
           });
 
@@ -612,6 +636,10 @@ window.app = new Vue({
         queryUrl.append('doublingtime', this.doublingTime);
       }
 
+      if (this.perMillion) {
+        queryUrl.append('perMillion', this.showTrendLine);
+      }
+
       // check if no countries selected
       // edge case: since selectedCountries may be larger than the country list (e.g. when switching from Confirmed Cases to Deaths), we can't simply check if selectedCountries is empty
       // so instead we check if the countries list does not include any of the selected countries
@@ -713,7 +741,7 @@ window.app = new Vue({
         showlegend: false,
         autorange: false,
         xaxis: {
-          title: 'Total ' + this.selectedData,
+          title: 'Total ' + this.selectedData + (this.perMillion ? ' per Million Population' : ''),
           type: this.selectedScale == 'Logarithmic Scale' ? 'log' : 'linear',
           range: this.selectedScale == 'Logarithmic Scale' ? this.logxrange : this.linearxrange,
           titlefont: {
@@ -722,7 +750,7 @@ window.app = new Vue({
           },
         },
         yaxis: {
-          title: 'New ' + this.selectedData + ' (in the Past Week)',
+          title: 'New ' + this.selectedData + ' (in the Past Week)' + (this.perMillion ? ' per Million Population' : ''),
           type: this.selectedScale == 'Logarithmic Scale' ? 'log' : 'linear',
           range: this.selectedScale == 'Logarithmic Scale' ? this.logyrange : this.linearyrange,
           titlefont: {
@@ -828,6 +856,7 @@ window.app = new Vue({
           selectedScale: this.selectedScale,
           showLabels: this.showLabels,
           showTrendLine: this.showTrendLine,
+          perMillion: this.perMillion,
           doublingTime: this.doublingTime,
         },
         traces: this.traces,
@@ -945,7 +974,7 @@ window.app = new Vue({
 
     selectedScale: 'Logarithmic Scale',
 
-    minCasesInCountry: 50,
+    minCasesInCountry: 0.0005,
 
     dates: [],
 
@@ -964,6 +993,8 @@ window.app = new Vue({
     showLabels: true,
 
     showTrendLine: true,
+
+    perMillion: true,
 
     doublingTime: 2,
     

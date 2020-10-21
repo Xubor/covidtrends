@@ -132,6 +132,9 @@
                Day Doubling Time</label>
           </div>
 
+          <input @change="createURL" type="checkbox" style="margin-top: 0.75rem;" id="perMillion" v-model="perMillion">
+          <label for="perMillion">Show amout relative to population</label>
+
         </div>
 
         <div class="countries">
@@ -165,6 +168,7 @@
   </div>
 
   <!-- page code -->
+  <script src="population2020.js"></script>
   <script src="vue-definitions.js?7"></script>
 
 </body>
